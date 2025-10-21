@@ -23,7 +23,6 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // Log the incoming request body for debugging
     console.log('Received payment verification request:', JSON.stringify(req.body));
     
     const {
