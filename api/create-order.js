@@ -1,4 +1,4 @@
-import Razorpay from 'razorpay';
+const Razorpay = require('razorpay');
 
 // Initialize Razorpay with your credentials
 const razorpay = new Razorpay({
@@ -7,7 +7,7 @@ const razorpay = new Razorpay({
 });
 
 // Create order endpoint
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
 
     // Create order options
     const options = {
-      amount: amount, // Amount should be in paise (e.g., 50000 = ₹500)
+      amount: amount,
       currency: currency || 'INR',
       receipt: receipt || `receipt_${Date.now()}`,
       notes: notes || {},
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
       order_id: order.id,
       amount: order.amount,
       currency: order.currency,
-      key_id: process.env.RAZORPAY_KEY_ID, // Send key_id to frontend
+      key_id: process.env.RAZORPAY_KEY_ID,
     });
   } catch (error) {
     console.error('Create order error:', error);
@@ -54,4 +54,4 @@ export default async function handler(req, res) {
       error: error.message || 'Failed to create order',
     });
   }
-}
+};
