@@ -1,5 +1,5 @@
-import Razorpay from 'razorpay';
-import crypto from 'crypto';
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
 
 // Initialize Razorpay with your credentials
 const razorpay = new Razorpay({
@@ -8,7 +8,7 @@ const razorpay = new Razorpay({
 });
 
 // Payment verification endpoint
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -23,6 +23,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Log the incoming request body for debugging
+    console.log('Received payment verification request:', JSON.stringify(req.body));
+    
     const {
       razorpay_payment_id,
       razorpay_order_id,
@@ -33,6 +36,11 @@ export default async function handler(req, res) {
 
     // Verify all required fields are present
     if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+      console.error('Missing fields:', {
+        has_payment_id: !!razorpay_payment_id,
+        has_order_id: !!razorpay_order_id,
+        has_signature: !!razorpay_signature,
+      });
       return res.status(400).json({
         verified: false,
         error: 'Missing required payment details',
@@ -59,19 +67,6 @@ export default async function handler(req, res) {
     // Fetch payment details from Razorpay to confirm
     const payment = await razorpay.payments.fetch(razorpay_payment_id);
 
-    // Optional: Store payment in your database
-    // await savePaymentToDatabase({
-    //   payment_id: razorpay_payment_id,
-    //   order_id: razorpay_order_id,
-    //   program_key,
-    //   plan_key,
-    //   amount: payment.amount,
-    //   status: payment.status,
-    //   customer_email: payment.email,
-    //   customer_contact: payment.contact,
-    //   created_at: new Date(),
-    // });
-
     return res.status(200).json({
       verified: true,
       payment: {
@@ -90,4 +85,4 @@ export default async function handler(req, res) {
       error: error.message || 'Payment verification failed',
     });
   }
-}
+};
