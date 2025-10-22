@@ -1,5 +1,5 @@
-const Razorpay = require('razorpay');
-const crypto = require('crypto');
+import Razorpay from 'razorpay';
+import crypto from 'crypto';
 
 // Initialize Razorpay with your credentials
 const razorpay = new Razorpay({
@@ -8,7 +8,7 @@ const razorpay = new Razorpay({
 });
 
 // Payment verification endpoint
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -23,8 +23,6 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    console.log('Received payment verification request:', JSON.stringify(req.body));
-    
     const {
       razorpay_payment_id,
       razorpay_order_id,
@@ -35,11 +33,6 @@ module.exports = async function handler(req, res) {
 
     // Verify all required fields are present
     if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
-      console.error('Missing fields:', {
-        has_payment_id: !!razorpay_payment_id,
-        has_order_id: !!razorpay_order_id,
-        has_signature: !!razorpay_signature,
-      });
       return res.status(400).json({
         verified: false,
         error: 'Missing required payment details',
@@ -84,4 +77,4 @@ module.exports = async function handler(req, res) {
       error: error.message || 'Payment verification failed',
     });
   }
-};
+}
