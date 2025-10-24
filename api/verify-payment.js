@@ -1,43 +1,77 @@
-// api/verify-payment.js
 import crypto from "crypto";
 
 export default async function handler(req, res) {
+  // ✅ Allow CORS for Framer or client domains
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
-    res.setHeader("Allow", ["POST"]);
-    return res.status(405).json({ error: "Method Not Allowed" });
+    return res.status(405).json({ success: false, error: "Method not allowed" });
   }
 
-  console.log("📩 Incoming payment verification request...");
-
-  // Read the raw request body (do NOT use express.json())
-  let rawBody = "";
-  for await (const chunk of req) rawBody += chunk;
-
-  console.log("🧾 Raw body:", rawBody);
-
-  let data;
   try {
-    data = JSON.parse(rawBody);
-  } catch (err) {
-    console.error("❌ Invalid JSON:", err);
-    return res.status(400).json({ error: "Invalid JSON" });
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      program_key,
+      plan_key,
+    } = req.body;
+
+    // 🧩 Step 1: Validate required fields
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      console.error("❌ Missing required payment fields:", req.body);
+      return res.status(400).json({
+        success: false,
+        error: "Missing payment verification fields",
+      });
+    }
+
+    // 🧮 Step 2: Generate expected signature
+    const generatedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    // 🧾 Step 3: Compare signatures
+    if (generatedSignature === razorpay_signature) {
+      console.log("✅ Payment verified successfully:", {
+        order_id: razorpay_order_id,
+        payment_id: razorpay_payment_id,
+        program_key,
+        plan_key,
+      });
+
+      return res.status(200).json({
+        success: true,
+        verified: true,
+        message: "Payment verified successfully",
+      });
+    } else {
+      console.error("❌ Invalid signature. Payment verification failed.", {
+        order_id: razorpay_order_id,
+        payment_id: razorpay_payment_id,
+        expected: generatedSignature,
+        received: razorpay_signature,
+      });
+
+      return res.status(400).json({
+        success: false,
+        verified: false,
+        error: "Invalid signature. Payment verification failed.",
+      });
+    }
+  } catch (error) {
+    console.error("⚠️ Verification error:", error);
+    return res.status(500).json({
+      success: false,
+      verified: false,
+      error: error.message || "Internal Server Error",
+    });
   }
-
-  const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = data;
-
-  if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
-    console.error("❌ Missing payment fields:", data);
-    return res.status(400).json({ error: "Missing required payment fields" });
-  }
-
-  const secret = process.env.RAZORPAY_KEY_SECRET;
-  if (!secret) {
-    console.error("❌ Missing RAZORPAY_KEY_SECRET environment variable");
-    return res.status(500).json({ error: "Server configuration error" });
-  }
-
-  // Compute HMAC signature
-  const expected = crypto
-    .createHmac("sha256", secret)
-    .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-    .digest("hex");
+}
